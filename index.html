@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Stay Hard - Pomodoro Timer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>⏱️ Stay Hard</h1>
+      </header>
+
+      <!-- Vista de Lista de Proyectos -->
+      <div id="projectsView" class="view active">
+        <div class="projects-grid-header">
+          <h2>Mis Proyectos</h2>
+          <button class="add-project-btn" id="addProjectBtn">
+            + Nuevo Proyecto
+          </button>
+        </div>
+        <div class="projects-grid" id="projectsGrid">
+          <!-- Los proyectos se agregarán aquí dinámicamente -->
+        </div>
+      </div>
+
+      <!-- Vista de Detalle del Proyecto -->
+      <div id="projectDetailView" class="view">
+        <div class="detail-header">
+          <button class="back-btn" id="backBtn">← Volver a Proyectos</button>
+          <div class="project-title-section">
+            <div class="project-title-row">
+              <span class="project-color-large" id="detailProjectColor"></span>
+              <h2 id="detailProjectName">Nombre del Proyecto</h2>
+            </div>
+          </div>
+        </div>
+
+        <div class="detail-layout">
+          <!-- Sección de Tiempo Acumulado -->
+          <div class="accumulated-time-card">
+            <div class="time-card-header">
+              <span class="time-card-icon">⏱️</span>
+              <h3>Tiempo Total Dedicado</h3>
+              <button
+                class="reset-time-btn"
+                id="resetTimeBtn"
+                title="Reiniciar tiempo"
+              >
+                Reiniciar el Tiempo
+              </button>
+            </div>
+            <div class="time-card-display">
+              <div class="time-large" id="accumulatedHours">0</div>
+              <div class="time-unit">horas</div>
+              <div class="time-separator">:</div>
+              <div class="time-large" id="accumulatedMinutes">0</div>
+              <div class="time-unit">minutos</div>
+            </div>
+          </div>
+
+          <!-- Temporizador -->
+          <div class="timer-section">
+            <div class="mode-tabs">
+              <button class="mode-tab active" data-mode="pomodoro">
+                Pomodoro
+              </button>
+              <button class="mode-tab" data-mode="shortBreak">
+                Descanso Corto
+              </button>
+              <button class="mode-tab" data-mode="longBreak">
+                Descanso Largo
+              </button>
+            </div>
+
+            <div class="timer-display">
+              <div class="time editable" id="timeDisplay">25:00</div>
+              <div class="time-hint" id="timeHint">Haz clic para editar</div>
+            </div>
+
+            <div class="timer-controls">
+              <button class="control-btn start-btn" id="startBtn">
+                INICIAR
+              </button>
+            </div>
+
+            <div class="session-info">
+              <span id="sessionCounter">#1</span>
+            </div>
+          </div>
+
+          <!-- Tareas del Proyecto -->
+          <div class="tasks-section">
+            <div class="tasks-header">
+              <h2>Tareas</h2>
+              <button class="add-task-btn" id="addTaskBtn">
+                + Agregar Tarea
+              </button>
+            </div>
+            <div class="tasks-list" id="tasksList">
+              <!-- Las tareas se agregarán aquí dinámicamente -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal de Nueva Tarea -->
+    <div class="modal" id="taskModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="taskModalTitle">Nueva Tarea</h2>
+          <button class="close-btn" id="closeTaskBtn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="setting-item">
+            <label for="taskName">Nombre de la tarea:</label>
+            <input
+              type="text"
+              id="taskName"
+              placeholder="¿En qué estás trabajando?"
+            />
+          </div>
+          <div class="setting-item">
+            <label for="taskPomodoros">Pomodoros estimados:</label>
+            <input
+              type="text"
+              inputmode="numeric"
+              pattern="[0-9]*"
+              id="taskPomodoros"
+              value="1"
+            />
+          </div>
+          <div class="setting-item" id="taskProjectField">
+            <label for="taskProject">Proyecto:</label>
+            <select id="taskProject">
+              <option value="">Sin proyecto</option>
+            </select>
+          </div>
+          <button class="save-btn" id="saveTaskBtn">Agregar Tarea</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal de Nuevo Proyecto -->
+    <div class="modal" id="projectModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Nuevo Proyecto</h2>
+          <button class="close-btn" id="closeProjectBtn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="setting-item">
+            <label for="projectName">Nombre del proyecto:</label>
+            <input
+              type="text"
+              id="projectName"
+              placeholder="Ej: Desarrollo Web, Estudios..."
+            />
+          </div>
+          <div class="setting-item">
+            <label for="projectColor">Color:</label>
+            <div class="color-picker">
+              <input type="color" id="projectColor" value="#4CAF50" />
+            </div>
+          </div>
+          <button class="save-btn" id="saveProjectBtn">Crear Proyecto</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
