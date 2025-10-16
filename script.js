@@ -7,6 +7,7 @@ let sessionCount = 1;
 let isEditingTime = false;
 let editingValue = "";
 let timerEndTime = null; // Timestamp cuando debería terminar el timer
+let audioContext = null; // Reutiliza el contexto de audio para el sonido de finalización
 
 // Configuración de tiempos (en minutos)
 let settings = {
@@ -115,12 +116,54 @@ function updateDisplay() {
   }
 }
 
+function getAudioContext() {
+  if (!audioContext) {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (AudioContextClass) {
+      audioContext = new AudioContextClass();
+    }
+  }
+  return audioContext;
+}
+
+function playTimerSound() {
+  const ctx = getAudioContext();
+  if (!ctx) {
+    return;
+  }
+
+  if (ctx.state === "suspended") {
+    ctx.resume();
+  }
+
+  const oscillator = ctx.createOscillator();
+  const gainNode = ctx.createGain();
+
+  oscillator.type = "triangle";
+  oscillator.frequency.setValueAtTime(880, ctx.currentTime);
+
+  gainNode.gain.setValueAtTime(0.0001, ctx.currentTime);
+  gainNode.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + 0.01);
+  gainNode.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 1);
+
+  oscillator.connect(gainNode);
+  gainNode.connect(ctx.destination);
+
+  oscillator.start();
+  oscillator.stop(ctx.currentTime + 1);
+}
+
 function startTimer() {
   if (!isRunning) {
     isRunning = true;
     startBtn.textContent = "PAUSAR";
     startBtn.classList.add("pause");
     startBtn.classList.add("active");
+
+    const ctx = getAudioContext();
+    if (ctx && ctx.state === "suspended") {
+      ctx.resume();
+    }
 
     // Establecer el tiempo del último tick y determinar el proyecto activo
     lastTickTime = Date.now();
@@ -266,6 +309,8 @@ function switchMode(mode) {
 }
 
 function playNotification() {
+  playTimerSound();
+
   // Sonido de notificación (opcional)
   if ("Notification" in window && Notification.permission === "granted") {
     new Notification("¡Tiempo terminado!", {
