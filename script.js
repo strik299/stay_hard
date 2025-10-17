@@ -1,3 +1,5 @@
+const ALLOWED_MODES = ["pomodoro", "shortBreak", "longBreak"];
+
 // Estado de la aplicación
 let currentMode = "pomodoro";
 let timeLeft = 25 * 60; // en segundos
@@ -8,6 +10,7 @@ let isEditingTime = false;
 let editingValue = "";
 let timerEndTime = null; // Timestamp cuando debería terminar el timer
 let audioContext = null; // Reutiliza el contexto de audio para el sonido de finalización
+let storageAvailable = true; // Bandera que se actualiza tras comprobar localStorage
 
 // Configuración de tiempos (en minutos)
 let settings = {
@@ -41,6 +44,11 @@ const projectDetailView = document.getElementById("projectDetailView");
 const projectsGrid = document.getElementById("projectsGrid");
 const backBtn = document.getElementById("backBtn");
 const resetTimeBtn = document.getElementById("resetTimeBtn");
+const exportDataBtn = document.getElementById("exportDataBtn");
+const importDataBtn = document.getElementById("importDataBtn");
+const importFileInput = document.getElementById("importFileInput");
+const storageStatus = document.getElementById("storageStatus");
+const localActionsNote = document.getElementById("localActionsNote");
 
 // Modales
 const taskModal = document.getElementById("taskModal");
@@ -58,14 +66,70 @@ const tasksList = document.getElementById("tasksList");
 const projectsList = document.getElementById("projectsList");
 const currentProjectDisplay = document.getElementById("currentProject");
 
+function isLocalStorageAvailable() {
+  try {
+    const testKey = "__stay_hard_storage_test__";
+    localStorage.setItem(testKey, "ok");
+    localStorage.removeItem(testKey);
+    return true;
+  } catch (error) {
+    console.warn("Almacenamiento local no disponible", error);
+    return false;
+  }
+}
+
+function updateStorageStatus() {
+  if (!storageStatus) return;
+
+  if (storageAvailable) {
+    storageStatus.textContent =
+      "Tus datos se guardan automáticamente en este navegador.";
+    storageStatus.classList.remove("warning");
+    if (exportDataBtn) exportDataBtn.disabled = false;
+    if (importDataBtn) importDataBtn.disabled = false;
+    if (localActionsNote) {
+      localActionsNote.textContent =
+        "Exporta una copia de seguridad antes de limpiar tu historial o cambiar de dispositivo y vuelve a importarla para recuperar tus proyectos, tareas y ajustes.";
+      localActionsNote.style.display = "";
+    }
+  } else {
+    storageStatus.textContent =
+      "El almacenamiento local está deshabilitado en este navegador. Los datos se perderán al cerrar la pestaña.";
+    storageStatus.classList.add("warning");
+    if (exportDataBtn) exportDataBtn.disabled = true;
+    if (importDataBtn) importDataBtn.disabled = true;
+    if (localActionsNote) {
+      localActionsNote.textContent =
+        "Activa el almacenamiento local del navegador o sal del modo incógnito para conservar tus datos entre sesiones.";
+      localActionsNote.style.display = "block";
+    }
+  }
+}
+
+function sanitizeInteger(value, min, max, fallback) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  const rounded = Math.round(parsed);
+  return Math.min(Math.max(rounded, min), max);
+}
+
+function sanitizeNonNegativeNumber(value, fallback = 0) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.max(parsed, 0);
+}
+
 // Inicialización
 document.addEventListener("DOMContentLoaded", () => {
+  storageAvailable = isLocalStorageAvailable();
   loadSettings();
   loadProjects();
   loadTasks();
   updateDisplay();
   renderProjectsGrid();
   updateProjectSelect();
+  renderTasks();
+  updateStorageStatus();
 
   // Event listener para volver a la vista de proyectos
   backBtn.addEventListener("click", showProjectsView);
@@ -484,6 +548,11 @@ function getModeLabel(mode) {
 
 // Funciones de Configuración
 function loadSettings() {
+  if (!storageAvailable) {
+    timeLeft = settings[currentMode] * 60;
+    return;
+  }
+
   const savedSettings = localStorage.getItem("pomodoroSettings");
   if (savedSettings) {
     settings = JSON.parse(savedSettings);
@@ -493,9 +562,18 @@ function loadSettings() {
 }
 
 function saveSettings() {
+  if (!storageAvailable) return;
   localStorage.setItem("pomodoroSettings", JSON.stringify(settings));
-} // Funciones de Tareas
+}
+
+// Funciones de Tareas
 function loadTasks() {
+  if (!storageAvailable) {
+    tasks = [];
+    taskIdCounter = 1;
+    return;
+  }
+
   const savedTasks = localStorage.getItem("pomodoroTasks");
   if (savedTasks) {
     tasks = JSON.parse(savedTasks);
@@ -505,6 +583,7 @@ function loadTasks() {
 }
 
 function saveTasks() {
+  if (!storageAvailable) return;
   localStorage.setItem("pomodoroTasks", JSON.stringify(tasks));
 }
 
@@ -652,8 +731,27 @@ addProjectBtn.addEventListener("click", () => openModal(projectModal));
 closeProjectBtn.addEventListener("click", () => closeModal(projectModal));
 saveProjectBtn.addEventListener("click", addProject);
 
+// Controles de copia de seguridad local
+if (exportDataBtn) {
+  exportDataBtn.addEventListener("click", exportAppData);
+}
+
+if (importDataBtn && importFileInput) {
+  importDataBtn.addEventListener("click", () => {
+    if (importDataBtn.disabled) return;
+    importFileInput.click();
+  });
+  importFileInput.addEventListener("change", handleImportFile);
+}
+
 // Funciones de Proyectos
 function loadProjects() {
+  if (!storageAvailable) {
+    projects = [];
+    projectIdCounter = 1;
+    return;
+  }
+
   const savedProjects = localStorage.getItem("pomodoroProjects");
   if (savedProjects) {
     projects = JSON.parse(savedProjects);
@@ -662,14 +760,195 @@ function loadProjects() {
       ...project,
       accumulatedTime: project.accumulatedTime || 0,
     }));
-    projectIdCounter =
-      projects.length > 0 ? Math.max(...projects.map((p) => p.id)) + 1 : 1;
+    projectIdCounter = projects.length
+      ? Math.max(
+          ...projects.map((project) => {
+            const numericId = Number(
+              String(project.id).replace(/[^0-9]/g, "")
+            );
+            return Number.isFinite(numericId) ? numericId : 0;
+          })
+        ) + 1
+      : 1;
   }
 }
 
 function saveProjects() {
+  if (!storageAvailable) return;
   localStorage.setItem("pomodoroProjects", JSON.stringify(projects));
 }
+
+function exportAppData() {
+  const dataToExport = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    currentMode,
+    sessionCount,
+    settings,
+    tasks,
+    projects,
+  };
+
+  const blob = new Blob([JSON.stringify(dataToExport, null, 2)], {
+    type: "application/json",
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `stay-hard-datos-${new Date()
+    .toISOString()
+    .slice(0, 10)}.json`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+function handleImportFile(event) {
+  const [file] = event.target.files || [];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (loadEvent) => {
+    try {
+      const parsedData = JSON.parse(loadEvent.target.result);
+      applyImportedData(parsedData);
+      alert(
+        "Datos importados correctamente. Continúa trabajando donde lo dejaste."
+      );
+    } catch (error) {
+      console.error("No se pudieron importar los datos", error);
+      alert(
+        "No se pudieron importar los datos. Asegúrate de seleccionar un archivo exportado por la aplicación."
+      );
+    } finally {
+      event.target.value = "";
+    }
+  };
+  reader.readAsText(file);
+}
+
+function applyImportedData(data) {
+  if (!data || typeof data !== "object") {
+    throw new Error("Formato de datos inválido");
+  }
+
+  if (data.settings && typeof data.settings === "object") {
+    const updatedSettings = { ...settings };
+    ALLOWED_MODES.forEach((mode) => {
+      if (mode in data.settings) {
+        const sanitizedValue = sanitizeInteger(
+          data.settings[mode],
+          1,
+          300,
+          updatedSettings[mode]
+        );
+        updatedSettings[mode] = sanitizedValue;
+      }
+    });
+    settings = updatedSettings;
+  }
+
+  if (Array.isArray(data.tasks)) {
+    tasks = data.tasks
+      .filter((task) => task && typeof task.name === "string" && task.name.trim() !== "")
+      .map((task, index) => {
+        const totalPomodoros = sanitizeInteger(task.totalPomodoros, 1, 99, 1);
+        const completedPomodoros = Math.min(
+          sanitizeInteger(task.completedPomodoros, 0, 99, 0),
+          totalPomodoros
+        );
+        return {
+          id:
+            typeof task.id === "number" && Number.isFinite(task.id)
+              ? task.id
+              : index + 1,
+          name: task.name,
+          totalPomodoros,
+          completedPomodoros,
+          completed:
+            typeof task.completed === "boolean"
+              ? task.completed
+              : completedPomodoros >= totalPomodoros,
+          projectId: task.projectId || null,
+        };
+      });
+
+    taskIdCounter = tasks.length
+      ? Math.max(...tasks.map((task) => task.id)) + 1
+      : 1;
+  } else {
+    tasks = [];
+    taskIdCounter = 1;
+  }
+
+  if (Array.isArray(data.projects)) {
+    projects = data.projects
+      .filter(
+        (project) =>
+          project && typeof project.name === "string" && project.name.trim() !== ""
+      )
+      .map((project, index) => {
+        const identifier =
+          typeof project.id === "string" && project.id.trim()
+            ? project.id
+            : `project-${index + 1}`;
+        return {
+          id: identifier,
+          name: project.name,
+          color:
+            typeof project.color === "string" && project.color.trim()
+              ? project.color
+              : "#4CAF50",
+          accumulatedTime: sanitizeNonNegativeNumber(project.accumulatedTime, 0),
+        };
+      });
+
+    projectIdCounter =
+      projects.length > 0
+        ? Math.max(
+            ...projects.map((project) => {
+              const numericId = Number(
+                String(project.id).replace(/[^0-9]/g, "")
+              );
+              return Number.isFinite(numericId) ? numericId : 0;
+            })
+          ) + 1
+        : 1;
+  } else {
+    projects = [];
+    projectIdCounter = 1;
+  }
+
+  if (storageAvailable) {
+    saveSettings();
+    saveTasks();
+    saveProjects();
+  }
+
+  if (ALLOWED_MODES.includes(data.currentMode)) {
+    currentMode = data.currentMode;
+  } else {
+    currentMode = "pomodoro";
+  }
+
+  sessionCount =
+    Number.isInteger(data.sessionCount) && data.sessionCount > 0
+      ? data.sessionCount
+      : 1;
+
+  currentProjectId = null;
+  activeTaskProjectId = null;
+  activeTaskId = null;
+  showProjectsView();
+  stopTimer();
+  timeLeft = settings[currentMode] * 60;
+  updateDisplay();
+  renderProjectsGrid();
+  updateProjectSelect();
+  renderTasks();
+}
+
 
 function addProject() {
   const projectName = document.getElementById("projectName").value.trim();

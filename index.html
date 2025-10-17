@@ -18,6 +18,38 @@
         <h1>⏱️ Stay Hard</h1>
       </header>
 
+      <section class="local-actions" aria-labelledby="localUsageTitle">
+        <div class="local-actions-info">
+          <h2 id="localUsageTitle">Usar la app en local</h2>
+          <p
+            id="storageStatus"
+            class="local-actions-status"
+            aria-live="polite"
+          >
+            Tus datos se guardan automáticamente en este navegador.
+          </p>
+          <p class="local-actions-note" id="localActionsNote">
+            Exporta una copia de seguridad antes de limpiar tu historial o
+            cambiar de dispositivo y vuelve a importarla para recuperar tus
+            proyectos, tareas y ajustes.
+          </p>
+        </div>
+        <div class="local-actions-buttons">
+          <button class="local-btn" id="exportDataBtn" type="button">
+            📤 Exportar datos
+          </button>
+          <button class="local-btn" id="importDataBtn" type="button">
+            📥 Importar datos
+          </button>
+          <input
+            type="file"
+            id="importFileInput"
+            accept="application/json"
+            hidden
+          />
+        </div>
+      </section>
+
       <!-- Vista de Lista de Proyectos -->
       <div id="projectsView" class="view active">
         <div class="projects-grid-header">
