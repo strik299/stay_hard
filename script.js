@@ -1,3 +1,5 @@
+const ALLOWED_MODES = ["pomodoro", "shortBreak", "longBreak"];
+
 // Estado de la aplicación
 let currentMode = "pomodoro";
 let timeLeft = 25 * 60; // en segundos
@@ -8,9 +10,7 @@ let isEditingTime = false;
 let editingValue = "";
 let timerEndTime = null; // Timestamp cuando debería terminar el timer
 let audioContext = null; // Reutiliza el contexto de audio para el sonido de finalización
-let storageAvailable = true; // Determina si localStorage está disponible
-
-const ALLOWED_MODES = ["pomodoro", "shortBreak", "longBreak"];
+let storageAvailable = true; // Bandera que se actualiza tras comprobar localStorage
 
 // Configuración de tiempos (en minutos)
 let settings = {
